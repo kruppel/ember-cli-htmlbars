@@ -19,6 +19,10 @@ module.exports = {
 
   setupPreprocessorRegistry: function(type, registry) {
     var self = this;
+    var pluginWrappers = this.registry.load('htmlbars-ast-plugin');
+    var plugins = pluginWrappers.map(function(wrapper) {
+      return wrapper.plugin;
+    });
 
     registry.remove('template', 'broccoli-ember-hbs-template-compiler');
 
@@ -26,7 +30,13 @@ module.exports = {
       name: 'ember-cli-htmlbars',
       ext: 'hbs',
       toTree: function(tree) {
-        return htmlbarsCompile(tree, self.htmlbarsOptions());
+        var options = self.htmlbarsOptions();
+
+        options.plugins = {
+          ast: plugins
+        };
+
+        return htmlbarsCompile(tree, options);
       }
     })
 
@@ -57,23 +67,10 @@ module.exports = {
       htmlbarsOptions = {
         isHTMLBars: true,
         FEATURES: projectConfig.EmberENV.FEATURES,
-        templateCompiler: require(path.join(this.emberPath(), 'ember-template-compiler')),
-
-        plugins: {
-          ast: this.astPlugins()
-        }
+        templateCompiler: require(path.join(this.emberPath(), 'ember-template-compiler'))
       };
     }
 
     return htmlbarsOptions;
-  },
-
-  astPlugins: function() {
-    var pluginWrappers = this.app.registry.load('htmlbars-ast-plugin');
-    var plugins = pluginWrappers.map(function(wrapper) {
-      return wrapper.plugin;
-    });
-
-    return plugins;
   }
 }
