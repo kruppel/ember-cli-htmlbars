@@ -1,37 +1,55 @@
 'use strict';
 
 var path = require('path');
+var checker = require('ember-cli-version-checker');
 var htmlbarsCompile = require('./index');
 
 module.exports = {
   name: 'ember-cli-htmlbars',
-  included: function (app) {
+
+  init: function() {
+    checker.assertAbove(this, '0.1.2');
+  },
+
+  parentRegistry: null,
+
+  shouldSetupRegistryInIncluded: function() {
+    return !checker.isAbove(this, '0.2.0');
+  },
+
+  setupPreprocessorRegistry: function(type, registry) {
     var self = this;
 
-    this._super.included.apply(this, arguments);
+    registry.remove('template', 'broccoli-ember-hbs-template-compiler');
 
-    this.registerTransforms(app.registry);
-
-    // ensure that broccoli-ember-hbs-template-compiler is not processing hbs files
-    app.registry.remove('template', 'broccoli-ember-hbs-template-compiler');
-
-    app.registry.add('template', {
+    registry.add('template', {
       name: 'ember-cli-htmlbars',
       ext: 'hbs',
       toTree: function(tree) {
-
         return htmlbarsCompile(tree, self.htmlbarsOptions());
       }
     })
+
+    if (type === 'parent') {
+      this.parentRegistry = registry;
+    }
+  },
+
+  included: function (app) {
+    this._super.included.apply(this, arguments);
+
+    if (this.shouldSetupRegistryInIncluded()) {
+      this.setupPreprocessorRegistry('parent', app.registry);
+    }
   },
 
   emberPath: function() {
-    return path.join(this.project.root, this.app.bowerDirectory, 'ember');
+    return path.join(this.project.root, this.project.bowerDirectory, 'ember');
   },
 
   htmlbarsOptions: function() {
     var emberVersion = require(this.emberPath() + '/bower.json').version;
-    var projectConfig = this.app.project.config(this.app.env);
+    var projectConfig = this.project.config(process.env.EMBER_ENV);
     var htmlbarsEnabled = !/^1\.[0-9]\./.test(emberVersion);
 
     var htmlbarsOptions;
@@ -48,18 +66,6 @@ module.exports = {
     }
 
     return htmlbarsOptions;
-  },
-
-  registerTransforms: function(registry) {
-    //var TransformEachInToHash = require('./ext/plugins/transform-each-in-to-hash');
-
-    //// we have to wrap these in an object so the ember-cli
-    //// registry doesn't try to call `new` on them (new is actually
-    //// called within htmlbars when compiling a given template).
-    //registry.add('htmlbars-ast-plugin', {
-    //  name: 'transform-each-in-to-hash',
-    //  plugin: TransformEachInToHash
-    //});
   },
 
   astPlugins: function() {
