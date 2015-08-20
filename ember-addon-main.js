@@ -62,15 +62,14 @@ module.exports = {
     var projectConfig = this.project.config(process.env.EMBER_ENV);
     var htmlbarsEnabled = !/^1\.[0-9]\./.test(emberVersion);
 
-    var htmlbarsOptions;
-    if (htmlbarsEnabled) {
-      htmlbarsOptions = {
-        isHTMLBars: true,
-        FEATURES: projectConfig.EmberENV.FEATURES,
-        templateCompiler: require(path.join(this.emberPath(), 'ember-template-compiler'))
-      };
+    if (!htmlbarsEnabled) {
+      return {};
     }
 
-    return htmlbarsOptions;
+    return {
+      isHTMLBars: true,
+      FEATURES: projectConfig.EmberENV.FEATURES,
+      templateCompiler: require(path.join(this.emberPath(), 'ember-template-compiler'))
+    };
   }
 }
